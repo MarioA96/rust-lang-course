@@ -9,6 +9,9 @@ use rocket::tokio::time::{Duration, sleep};
 use rocket::form::FromForm;
 use rocket::form::Form;
 
+use rocket::serde::json::Json;
+use rocket::serde::{Serialize, Deserialize};
+
 #[macro_use]
 extern crate rocket;
 
@@ -65,6 +68,31 @@ async fn operation(operation: Form<Operation>) -> String {
     format!("{}: {} con {} = {}", operand, operation.value_1, operation.value_2, result)
 }
 
+
+// #[allow(dead_code)]
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct User {
+    id: usize,
+    name: String,
+}
+
+#[get("/<id>")]
+async fn user(id: usize) -> Json<User>{
+    let u1: User = User { id: 1, name: String::from("Mario") };
+    let u2: User = User { id: 2, name: String::from("Alberto") };
+    let u3: User = User { id: 3, name: String::from("Quiroz") };
+
+    let user_from_id = match id {
+        1 => u1,
+        2 => u2,
+        3 => u3,
+        _ => User { id, name: String::from("Unknown") },
+    };
+
+    Json(user_from_id)
+}
+
 #[launch]
 async fn rocket() -> _ {
     rocket::build()
@@ -74,4 +102,5 @@ async fn rocket() -> _ {
         .mount("/blocking_task", routes![blocking_task])
         .mount("/public", FileServer::from("www/static"))
         .mount("/operation", routes![operation])
+        .mount("/users", routes![user])
 }
