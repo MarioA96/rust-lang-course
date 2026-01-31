@@ -7,16 +7,14 @@ use std::{
 };
 
 fn handle_connection(stream: TcpStream){
-    // let mut buf = [0; 10];
-    // let len = stream.peek(&mut buf).expect("peek failed");
-    // println!("len: {}", len);
     let mut s = &stream;
 
-    println!("Connected to the server!");
-    
-    let mut buffer = [0; 128];
-    let printable = s.read(&mut buffer).expect("Couldnt resolve"); // Read response
-    println!("printable: {}", printable);
+    let message = String::from("HoLaDeSdEsErVeR");
+    s.write(message.as_bytes()).expect("Couldnt resolve");
+
+    // let mut buffer = String::new();
+    // let printable = s.read_to_string(&mut buffer).expect("Couldnt resolve"); // Read response
+    // println!("printable: {}", printable);
 }
 
 fn main() -> std::io::Result<()> {
@@ -27,8 +25,13 @@ fn main() -> std::io::Result<()> {
     
     let listener = TcpListener::bind(&addrs[..])?;
 
-    for stream in listener.incoming() {
-        match stream{
+    let addr = listener.local_addr().expect("Couldn't bind");
+    let ip = addr.ip().to_string();
+    let port = addr.port().to_string();
+    println!("Server up at: {}:{}", ip, port);
+
+    for stream in listener.incoming() { //Returns an Iterator and so it acts as an ::connect()
+        match stream {
             Ok(stream) => {
                 handle_connection(stream)
             },
