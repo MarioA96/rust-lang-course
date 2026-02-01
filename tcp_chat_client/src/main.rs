@@ -1,6 +1,7 @@
 use std::{
     io::prelude::*, 
-    net::{TcpStream, SocketAddr}
+    net::{TcpStream, SocketAddr},
+    thread
 };
 
 use std::io;
@@ -12,7 +13,7 @@ fn main() -> std::io::Result<()> {
         SocketAddr::from(([127,0,0,1], 4343)),
     ];
 
-    let mut stream = TcpStream::connect(&addrs[..])?;
+    let stream = TcpStream::connect(&addrs[..])?;
 
     // Set the TTL value
     stream.set_ttl(64).expect("Failed to set TTL");
@@ -26,28 +27,37 @@ fn main() -> std::io::Result<()> {
 
     let mut reader = BufReader::new(stream.try_clone()?);
 
-    // let mut buf: Vec<u8> = vec![];
-    let mut buf = String::new();
-    loop {
-        buf.clear();
-        match reader.read_line(&mut buf) {
-            // Server is disconnected
-            Ok(0) => {
-                break;
-            }
-            Ok(_) => {
-                read_data(buf);
-                break;
-            },
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                // wait until network socket is ready, typically implemented
-                // via platform-specific APIs such as epoll or IOCP\\
-                eprintln!("An exception has occured while attempting to resolve nonblocking status");
-                break;
-            }
-            Err(e) => panic!("encountered IO error: {e}"),
+    thread::spawn(move || {
+        let mut buf = String::new();
+        loop {
+            buf.clear();
+            match reader.read_line(&mut buf) {
+                // Server is disconnected
+                Ok(0) => {
+                    break;
+                }
+                Ok(_) => {
+                    read_data(buf);
+                    break;
+                },
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    // wait until network socket is ready, typically implemented
+                    // via platform-specific APIs such as epoll or IOCP\\
+                    eprintln!("An exception has occured while attempting to resolve nonblocking status");
+                    break;
+                }
+                Err(e) => panic!("encountered IO error: {e}"),
+            };
         };
-    };
+    });
+
+    // Main thread para enviar mensajes
+    // let stdin = io::stdin();
+
+    // for line in stdin.lock().lines() {
+    //     let msg = line?;
+    //     writeln!(stream, "{}", msg)?;
+    // }
     
     Ok(())
 }
@@ -55,25 +65,3 @@ fn main() -> std::io::Result<()> {
 fn read_data(buf: String) {
     println!("bytes: {buf:?}");
 }
-// fn read_data(buf: Vec<u8>){
-//     println!("bytes: {buf:?}");
-
-//     let ascii_table_upper = vec![
-//         'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-//     ];
-//     let ascii_table_lower = vec![
-//         'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-//     ];
-//     for b in buf {
-//         if b == 32{
-//             print!(" ")
-//         }else if b >= 65 && b <= 90{
-//             let val = b - 65 as u8;
-//             print!("{}", ascii_table_upper[ val as usize ]);
-//         } else if b >= 97 && b <= 122 {
-//             let val = b - 97 as u8;
-//             print!("{}", ascii_table_lower[ val as usize ]);
-//         }
-//     }
-//     println!("");
-// }
