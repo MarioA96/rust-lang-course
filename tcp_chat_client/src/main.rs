@@ -7,25 +7,20 @@ use std::{
 use std::io;
 use std::io::{BufReader};
 
-fn main() -> std::io::Result<()> {
-    let addrs = [
-        SocketAddr::from(([127,0,0,1], 80)),
-        SocketAddr::from(([127,0,0,1], 4343)),
-    ];
 
-    let mut stream = TcpStream::connect(&addrs[..])?;
-    let mut reader = BufReader::new(stream.try_clone()?);
+fn handle_server_communication(mut stream: TcpStream) -> io::Result<()> {
+    stream.set_nonblocking(true).expect("set_nonblocking call failed");
 
-    // Set the TTL value
-    stream.set_ttl(64).expect("Failed to set TTL");
+    let server_ip = stream.peer_addr().expect("Couldnt resolve peer addr").ip();
+    let server_port = stream.peer_addr().expect("Couldnt resolve peer addr").port();
+    let client_ip = stream.local_addr().expect("Couldnt resolve local addr").ip();
+    let client_port = stream.local_addr().expect("Couldnt resolve local addr").port();
+    println!("Connected to server {}:{} from: {}:{}", server_ip, server_port, client_ip, client_port);
 
-    // Optionally, you can check the TTL value
-    let ttl = stream.ttl().expect("Failed to get TTL");
-    println!("Current TTL: {}", ttl);
+    // Then we create a BufReader to read new incoming messages from the server
+    let mut reader = BufReader::new(stream.try_clone().expect("Error while attempting to read stream"));
 
-    // We set the current connection to nonblocking status
-    // stream.set_nonblocking(true).expect("set_nonblocking call failed");
-
+    // We spawn a new thread to handle incoming messages from the server in order to not block the main client thread
     thread::spawn(move || {
         let mut buf = String::new();
         loop {
@@ -33,16 +28,15 @@ fn main() -> std::io::Result<()> {
             match reader.read_line(&mut buf) {
                 // Server is disconnected
                 Ok(0) => {
+                    println!("Server disconnected");
                     break;
                 },
 
-                Ok(_) => println!("bytes: {buf:?}"),
+                Ok(_) => print!("Message from server> {}", buf),
 
+                // We handle the WouldBlock error to continue the loop
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    // wait until network socket is ready, typically implemented
-                    // via platform-specific APIs such as epoll or IOCP\\
-                    eprintln!("An exception has occured while attempting to resolve nonblocking status");
-                    break;
+                    continue;
                 },
 
                 Err(e) => panic!("encountered IO error: {e}"),
@@ -50,15 +44,36 @@ fn main() -> std::io::Result<()> {
         };
     });
 
-    // Main thread para enviar mensajes
+    println!("Type your messages below:\n");
+
     let stdin = io::stdin();
-
-    let addr = stream.local_addr().expect("Couldnt resolve local addr");
-
     for line in stdin.lock().lines() {
-        let msg = line?;
-        // print!("Client: {}:{}> ", addr.ip(), addr.port());
-        writeln!(stream, "{}:{} > {}", addr.ip(), addr.port() ,msg)?;
+        let message = line?;
+        let message_with_newline = format!("{}\n", message);
+        stream.write(message_with_newline.as_bytes())?;
+    }
+
+    Ok(())
+}
+
+fn main() -> std::io::Result<()> {
+    // Define the server addresses to connect to
+    let addrs = [
+        SocketAddr::from(([127,0,0,1], 80)),
+        SocketAddr::from(([127,0,0,1], 4343)),
+    ];
+
+    // Attempt to connect to the server addresses
+    let stream = TcpStream::connect(&addrs[..])?;
+
+    match stream.local_addr() {
+        Ok(_) => {
+            // Once we stablish the connection, we can proceed to handle communication
+            handle_server_communication(stream)?;
+        },
+        Err(e) => {
+            eprintln!("Could not get local address: {}", e);
+        }
     }
     
     Ok(())
