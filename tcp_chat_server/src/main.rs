@@ -9,33 +9,42 @@ use std::{
 };
 use std::thread;
 
-fn handle_connection(stream: TcpStream){
-    let mut s = &stream;
-    let local = s.peer_addr().expect("Couldnt resolve for incoming address <ScoketAddr>");
-    println!("Incoming local addr: {}:{}", local.ip(), local.port());
+fn handle_connection(mut stream: TcpStream){
+    // We set the current connection to nonblocking status
+    // we want to handle multiple clients without blocking the server
+    // and also to listen to messages from clients asynchronously and sending responses
+    stream.set_nonblocking(true).expect("set_nonblocking call failed");
 
-    let message = String::from("hOlA dEsDe SeRvEr");
-    s.write(message.as_bytes()).expect("Couldnt resolve");
+    // We receive the local address of the incoming connection
+    let addr = stream.peer_addr().expect("Couldnt resolve for incoming address <ScoketAddr>");
+    println!("Incoming connection from: {}:{}", addr.ip(), addr.port());
 
+    // We send a response to the client to confirm the connection
+    let welcome_message = format!("Connected! Your address is {}:{}\n", addr.ip(), addr.port());
+    stream.write(welcome_message.as_bytes()).expect("Couldnt send welcome message");
+
+    // Then we create a BufReader to read new incoming messages from the client
     let mut reader = BufReader::new(stream.try_clone().expect("Error while attempting to read stream"));
-
+    // We spawn a new thread to handle incoming messages from the client in order to not block the main server thread
     thread::spawn(move || {
         let mut buf = String::new();
         loop {
             buf.clear();
             match reader.read_line(&mut buf) {
-                // Server is disconnected
+                // Client is disconnected
                 Ok(0) => {
+                    println!("Client {}:{} disconnected", addr.ip(), addr.port());
                     break;
                 },
 
-                Ok(_) => println!("{buf:?}"),
+                Ok(_) => print!("Message from {}:{}> {}", addr.ip(), addr.port(), buf),
 
+                // We handle the WouldBlock error to continue the loop
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                     // wait until network socket is ready, typically implemented
-                    // via platform-specific APIs such as epoll or IOCP\\
-                    eprintln!("An exception has occured while attempting to resolve nonblocking status");
-                    break;
+                    // via platform-specific APIs such as epoll or IOCP
+                    // Here we just continue the loop
+                    continue;
                 },
 
                 Err(e) => panic!("encountered IO error: {e}"),
@@ -51,15 +60,20 @@ fn main() -> std::io::Result<()> {
         SocketAddr::from(([127,0,0,1], 4343)),
     ];
     
+    //After we bind to the address we create a listener in that socket
     let listener = TcpListener::bind(&addrs[..])?;
 
+    //We just print the data of wich socket are we binding the server
     let addr = listener.local_addr().expect("Couldn't bind");
     let ip = addr.ip().to_string();
     let port = addr.port().to_string();
     println!("Server up at: {}:{}", ip, port);
 
-    for stream in listener.incoming() { //Returns an Iterator and so it acts as an ::connect()
+    //Returns an Iterator and so it acts as an ::connect()
+    //For every incoming connection we spawn a new thread to handle it
+    for stream in listener.incoming() {
         match stream {
+            // If we get a stream we handle the connection in a new thread
             Ok(stream) => {
                 let stream = stream;
 
