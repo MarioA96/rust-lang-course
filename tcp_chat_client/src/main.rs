@@ -9,7 +9,7 @@ use std::io::{BufReader};
 
 
 fn handle_server_communication(mut stream: TcpStream) -> io::Result<()> {
-    // stream.set_nonblocking(true).expect("set_nonblocking call failed");
+    stream.set_nonblocking(true).expect("set_nonblocking call failed");
 
     let server_ip = stream.peer_addr().expect("Couldnt resolve peer addr").ip();
     let server_port = stream.peer_addr().expect("Couldnt resolve peer addr").port();
