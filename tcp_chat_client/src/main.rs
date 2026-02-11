@@ -32,7 +32,7 @@ fn handle_server_communication(mut stream: TcpStream) -> io::Result<()> {
                     break;
                 },
 
-                Ok(_) => print!("Message from server> {}", buf),
+                Ok(_) => print!("{}", buf),
 
                 // We handle the WouldBlock error to continue the loop
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
@@ -60,7 +60,7 @@ fn main() -> std::io::Result<()> {
     // Define the server addresses to connect to
     let addrs = [
         SocketAddr::from(([127,0,0,1], 80)),
-        SocketAddr::from(([127,0,0,1], 4343)),
+        SocketAddr::from(([0,0,0,0], 4343)),
     ];
 
     // Attempt to connect to the server addresses
