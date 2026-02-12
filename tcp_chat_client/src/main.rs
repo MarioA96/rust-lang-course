@@ -9,8 +9,10 @@ use std::io::{BufReader};
 
 
 fn handle_server_communication(mut stream: TcpStream) -> io::Result<()> {
+    // We set the stream to non-blocking mode to allow us to read from the server without blocking the main thread
     stream.set_nonblocking(true).expect("set_nonblocking call failed");
 
+    // We print the server and client addresses for debugging purposes
     let server_ip = stream.peer_addr().expect("Couldnt resolve peer addr").ip();
     let server_port = stream.peer_addr().expect("Couldnt resolve peer addr").port();
     let client_ip = stream.local_addr().expect("Couldnt resolve local addr").ip();
