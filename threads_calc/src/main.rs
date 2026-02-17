@@ -37,3 +37,9 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
+
+fn calculation() -> i32 {
+    // This function can be used to perform some calculation and return a result
+    // For demonstration purposes, we will just return a fixed value
+    42
+}
