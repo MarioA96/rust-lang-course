@@ -41,5 +41,9 @@ fn main() -> std::io::Result<()> {
 fn calculation() -> i32 {
     // This function can be used to perform some calculation and return a result
     // For demonstration purposes, we will just return a fixed value
-    42
+    for _ in 0..1000000 {
+        // Simulate some work by performing a calculation
+        let _ = 1 + 1;
+    }
+    return 42; // Return a dummy result
 }
