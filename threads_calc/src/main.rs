@@ -25,6 +25,7 @@ fn main() -> std::io::Result<()> {
 }
 
 fn calculation(counter: &Arc<Mutex<i32>>, handles: &mut Vec<thread::JoinHandle<()>>) {
+    // We loop 10,000 times to create a total of 10,000 threads, each of which will increment the counter 100 times
     for _ in 0..10000 {
         // We clone the Arc to get a new reference to the counter for each thread
         let counter_clone = Arc::clone(counter);
@@ -37,6 +38,7 @@ fn calculation(counter: &Arc<Mutex<i32>>, handles: &mut Vec<thread::JoinHandle<(
                 *num += 1;
             }
         });
+        
         // We push the thread handle into the vector so we can join it later
         handles.push(handle);
     }
