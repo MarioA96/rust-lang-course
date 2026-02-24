@@ -18,6 +18,17 @@ fn main() -> std::io::Result<()> {
         handle.join().unwrap();
     }
 
+    // We create a new thread to perform some additional work after all the incrementing threads have finished
+    let counter_clone = Arc::clone(&counter);
+    let handle = thread::spawn(move || {
+        // We lock the mutex to get mutable access to the counter, increment it, and then the lock is automatically released when the scope ends
+        let mut num = counter_clone.lock().unwrap();
+        // We increment the counter one more time to demonstrate that we can still access it after the other threads have finished
+        *num += 1;
+    });
+
+    handle.join().unwrap(); // We join the thread to ensure it has completed before we print the final counter value
+
     // Finally, we print the final value of the counter, which should be 1000 (10 threads * 100 increments each)
     println!("Final counter value: {}", *counter.lock().unwrap());
 
