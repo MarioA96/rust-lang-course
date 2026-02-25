@@ -20,6 +20,9 @@ fn main() -> std::io::Result<()> {
 
     // We create a new thread to perform some additional work after all the incrementing threads have finished
     let counter_clone = Arc::clone(&counter);
+
+    // We call the perform_additional_work function to do some additional work after the threads have finished
+    perform_additional_work();  
     let handle = thread::spawn(move || {
         // We lock the mutex to get mutable access to the counter, increment it, and then the lock is automatically released when the scope ends
         let mut num = counter_clone.lock().unwrap();
@@ -53,4 +56,10 @@ fn calculation(counter: &Arc<Mutex<i32>>, handles: &mut Vec<thread::JoinHandle<(
         // We push the thread handle into the vector so we can join it later
         handles.push(handle);
     }
+}
+
+fn perform_additional_work() {
+    // This function can be used to perform any additional work that we want to do after the threads have finished incrementing the counter
+    // For example, we could print a message or perform some other calculations here
+    println!("Performing additional work after threads have finished.");
 }
